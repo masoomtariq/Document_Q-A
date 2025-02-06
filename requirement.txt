@@ -3,6 +3,5 @@ streamlit-chat
 streamlit
 langchain_community
 pypdf
-cohere
 qdrant_client
 langchain-google-genai
