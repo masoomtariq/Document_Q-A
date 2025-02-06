@@ -1,6 +1,5 @@
-streamlit-chat==0.1.1
-streamlit-chat
 streamlit
+streamlit-chat
 langchain_community
 pypdf
 qdrant_client
