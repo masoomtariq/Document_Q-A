@@ -1,0 +1,8 @@
+streamlit-chat==0.1.1
+streamlit-chat
+streamlit
+langchain_community
+pypdf
+cohere
+qdrant_client
+langchain-google-genai
