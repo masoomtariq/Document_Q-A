@@ -198,7 +198,7 @@ def main():
         query = st.chat_input("Enter Prompt")
         # Check if 'entered_prompt' is empty or not
         if query:
-            st.ballons()
+            st.balloons()
             st.session_state.entered_prompt = query
             generate_responce()
             
