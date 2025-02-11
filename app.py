@@ -198,6 +198,7 @@ def main():
         query = st.chat_input("Enter Prompt")
         # Check if 'entered_prompt' is empty or not
         if query:
+            st.ballons()
             st.session_state.entered_prompt = query
             generate_responce()
             
@@ -206,6 +207,7 @@ def main():
             if st.button("Clear_Chat", help="Clear the chats"):
                 clear_chat()
             display_chat()
+            st.snow()
     
 
 if __name__ == "__main__":
