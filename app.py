@@ -154,7 +154,7 @@ def generate_responce():
     set_up = {'context': itemgetter('query') | retreival, 'query': itemgetter('query')}
 
     chain = set_up | prompt | llm
-    response = chain.invoke({'query': st.session_state.entered_prompt)
+    response = chain.invoke({'query': st.session_state.entered_prompt})
 
     st.session_state['past'].append(st.session_state.entered_prompt)
     st.session_state['generated'].append(response.content)
