@@ -148,28 +148,22 @@ def generate_responce():
 
     Question:
     {query}
-
-    Conservation_History:
-    {chat_history}
     """
     prompt = ChatPromptTemplate.from_template(template)
 
-    set_up = {'context': itemgetter('query') | retreival, 'query': itemgetter('query'), 'chat_history': itemgetter('chat_history')}
+    set_up = {'context': itemgetter('query') | retreival, 'query': itemgetter('query')}
 
     chain = set_up | prompt | llm
-    response = chain.invoke({'query': st.session_state.entered_prompt, 'chat_history': st.session_state.chat_history})
+    response = chain.invoke({'query': st.session_state.entered_prompt)
 
     st.session_state['past'].append(st.session_state.entered_prompt)
     st.session_state['generated'].append(response.content)
-
-    st.session_state['chat_history'].append(('User_Query: '+st.session_state.entered_prompt, 'Ai_Message: '+response.content))
 
 def initialize_state():
     # Define initial states and assign values
     initialStates = {
         'generated': [],
         'past': [],
-        'chat_history': [],
         'entered_prompt': '',
         'file': '',
         'file_path': '',
