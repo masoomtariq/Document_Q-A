@@ -97,7 +97,6 @@ def vectorize():
 
 # Clears the current session, deleting the vector store and uploaded file
 def clear_session():
-    st.session_state.vectors.client.delete_collection(collection_name=st.session_state.collection_name)
     st.session_state.clear()
     st.toast("Session_State is Cleared")
 
