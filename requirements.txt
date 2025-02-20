@@ -4,3 +4,5 @@ langchain_community
 pypdf
 qdrant_client
 langchain-google-genai
+langchain_groq
+faiss-cpu

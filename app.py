@@ -4,15 +4,15 @@ import tempfile
 from langchain.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter as splitter # For splitting text into chunks
 from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings #For creating text embeddings
-from langchain.vectorstores import Qdrant # For storing and searching vectors
-from qdrant_client import QdrantClient
+from langchain.vectorstores import FAISS # For storing and searching vectors
+from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI # For using Gemini LLM
 from langchain.prompts import ChatPromptTemplate # For creating prompt templates
 from langchain.load import dumps, loads
 from operator import itemgetter # For accessing items in dictionaries
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
 import os
-
-#hiiii
 
 ## Langsmith tracking (for experiment tracking, if you have an account)
 os.environ['LANGSMITH_TRACING'] = 'true'
@@ -20,8 +20,7 @@ os.environ['LANGSMITH_ENDPOINT'] = 'https://api.smith.langchain.com'
 os.environ['LANGSMITH_PROJECT']  = "Document Q/A"
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
-qdrant_key = st.secrets["QDRANT_API_KEY"]
-qdrant_url = st.secrets["QDRANT_URL"]
+groq_key = st.secrets["GROQ_API_KEY"]
 google_key = st.secrets["GOOGLE_API_KEY"]
 
 # Loads a document from the given file path, handling different file types
@@ -52,13 +51,15 @@ def clean_chunk_meta():
 def vectore_store():
     embed=GoogleGenerativeAIEmbeddings(google_api_key=google_key, model="models/embedding-001")
     try:
-        vectors = Qdrant.from_documents(documents=st.session_state.splits, embedding=embed, url=qdrant_url, api_key=qdrant_key, collection_name=st.session_state.collection_name) # Create vector store
+        vectors = FAISS.from_documents(documents=st.session_state.splits, embedding=embed) # Create vector store
         return vectors
     except Exception as e:
         st.error(f"Error creating vector store: {e}") # Display error
         return None
     
+model = ChatGroq(model="llama-3.2-1b-preview", temperature=0, api_key=groq_key)
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
+
 # Gets unique documents from a list of lists
 def get_unique(docs : list[list]):
     flattened = [dumps(item) for sublist in docs for item in sublist]
@@ -74,7 +75,7 @@ def get_queries(query):
     Provide these alternative questions separated by newlines.
     please do not include extra text do your best it is very important to my career.
     Original question: {query}"""
-    response = llm.invoke(template)
+    response = model.invoke(template)
     queries = [query]+(lambda x : [i for i in x.split('\n') if i])(response.content)
     return queries
 
@@ -109,53 +110,14 @@ def clear_chat():
 def generate_responce():
 
     retreival = get_queries | st.session_state.vectors.as_retriever().map() | get_unique
-    template = """
-    You are a helpful and informative document question-answering assistant.  Your primary goal is to provide accurate and insightful answers based *exclusively* on the provided context.  You are an expert at synthesizing information and drawing connections within the given text.  Do not rely on any external knowledge or information beyond what is explicitly given in the context.
-    If the user expresses gratitude or indicates the end of the conversation, respond with a polite farewell.
-    Always maintain a polite and professional tone.
-**Instructions for Enhancing Context-Based Responses:**
 
-1. **Context is King:**  Treat the provided context as the absolute source of truth.  Base your entire response on this information.  If the context doesn't contain the answer, explicitly state that "The answer cannot be found within the provided context."  Do not hallucinate or make assumptions.
+    st.session_state.messages.append(HumanMessage(content = st.session_state.entered_prompt))
+    prompt = ChatPromptTemplate(messages = st.session_state.messages)
 
-2. **Deep Understanding:**  Carefully analyze the context to understand the nuances of the information presented.  Identify key concepts, relationships, and any implicit information conveyed.
-
-3. **Synthesis and Summarization:**  If the answer requires combining information from multiple parts of the context, synthesize the relevant pieces into a coherent and comprehensive response.  Summarize the key points concisely and accurately.
-
-4. **Clarity and Conciseness:**  Provide clear and concise answers.  Avoid unnecessary jargon or overly complex language.  Structure your response logically and use bullet points or numbered lists if appropriate to enhance readability.
-
-5. **Evidence-Based Answers:**  Whenever possible, directly quote or paraphrase specific sentences or phrases from the context to support your answer.  This demonstrates that your response is grounded in the provided information.  If you paraphrase, ensure you maintain the original meaning. At the end of the answer, Cite the page of the context that refer your answer.
-
-6. **Address the Question Directly:**  Make sure your answer directly addresses the question being asked.  Avoid going off on tangents or providing irrelevant information.
-
-7. **Handle Ambiguity:**  If the question is ambiguous or can be interpreted in multiple ways, acknowledge the ambiguity and provide possible answers based on different interpretations of the question, all within the bounds of the provided context.
-
-8. **Iterative Refinement:**  If you are unsure about the answer, re-read the context carefully and try to identify any clues or connections you may have missed.
-
-**Example:**
-
-**Context:** "The capital of France is Paris.  Paris is known for its beautiful architecture and its delicious food.  The Eiffel Tower is a famous landmark in Paris."
-
-**Question:** What is the capital of France and what is it known for?
-
-**Good Response:** The capital of France is Paris.  Paris is known for its beautiful architecture and its delicious food.
-
-**Bad Response (Hallucination):** The capital of France is Paris. It's a vibrant city with a rich history and culture, and is considered a global center for fashion and art.  (This response adds information not in the context).
-
-**Remember:** Your focus should be on extracting and synthesizing information *exclusively* from the provided context.  Your success depends on your ability to understand and apply these instructions.
-
-    <context>
-    {context}
-    <context>
-
-    Question:
-    {query}
-    """
-    prompt = ChatPromptTemplate.from_template(template)
-
-    set_up = {'context': itemgetter('query') | retreival, 'query': itemgetter('query')}
-
-    chain = set_up | prompt | llm
+    chain = {'context': itemgetter('query') | retreival } | prompt | llm
     response = chain.invoke({'query': st.session_state.entered_prompt})
+
+    st.session_state.messages.append(AIMessage(content=response.content))
 
     st.session_state['past'].append(st.session_state.entered_prompt)
     st.session_state['generated'].append(response.content)
@@ -165,6 +127,7 @@ def initialize_state():
     initialStates = {
         'generated': [],
         'past': [],
+        'messages': [],
         'entered_prompt': '',
         'file': '',
         'file_path': '',
@@ -175,10 +138,40 @@ def initialize_state():
     for key, value in initialStates.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    template = """
+    You are a helpful and informative document question-answering assistant.  Your primary goal is to provide accurate and insightful answers based *exclusively* on the provided context.  You are an expert at synthesizing information and drawing connections within the given text.  Do not rely on any external knowledge or information beyond what is explicitly given in the context.
+    If the user expresses gratitude or indicates the end of the conversation, respond with a polite farewell.
+    Always maintain a polite and professional tone.
+    **Instructions for Enhancing Context-Based Responses:**
+
+    1. **Context is King:**  Treat the provided context as the absolute source of truth.  Base your entire response on this information.  If the context doesn't contain the answer, explicitly state that "The answer cannot be found within the provided context."  Do not hallucinate or make assumptions.
+
+    2. **Deep Understanding:**  Carefully analyze the context to understand the nuances of the information presented.  Identify key concepts, relationships, and any implicit information conveyed.
+
+    3. **Synthesis and Summarization:**  If the answer requires combining information from multiple parts of the context, synthesize the relevant pieces into a coherent and comprehensive response.  Summarize the key points concisely and accurately.
+
+    4. **Clarity and Conciseness:**  Provide clear and concise answers.  Avoid unnecessary jargon or overly complex language.  Structure your response logically and use bullet points or numbered lists if appropriate to enhance readability.
+
+    5. **Evidence-Based Answers:**  Whenever possible, directly quote or paraphrase specific sentences or phrases from the context to support your answer.  This demonstrates that your response is grounded in the provided information.  If you paraphrase, ensure you maintain the original meaning. At the end of the answer, Cite the page of the context that refer your answer.
+
+    6. **Address the Question Directly:**  Make sure your answer directly addresses the question being asked.  Avoid going off on tangents or providing irrelevant information.
+
+    7. **Handle Ambiguity:**  If the question is ambiguous or can be interpreted in multiple ways, acknowledge the ambiguity and provide possible answers based on different interpretations of the question, all within the bounds of the provided context.
+
+    8. **Iterative Refinement:**  If you are unsure about the answer, re-read the context carefully and try to identify any clues or connections you may have missed.
+
+    **Remember:** Your focus should be on extracting and synthesizing information *exclusively* from the provided context.  Your success depends on your ability to understand and apply these instructions.
+
+    <context>
+    {context}
+    <context>
+    """
+
+    st.session_state.messages.append(SystemMessagePromptTemplate.from_template(template))
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
-    st.session_state.collection_name, ext = st.session_state.file_source.split('.')
+    st.session_state.collection_name, ext = st.session_state.file_source.split('.')[-1]
     st.session_state.file_ext = '.'+ext
     # Save the uploaded file to the tempfile filesystem
     with tempfile.NamedTemporaryFile(delete=False, suffix=st.session_state.file_ext) as temp_file:
