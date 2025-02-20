@@ -20,7 +20,7 @@ os.environ['LANGSMITH_ENDPOINT'] = 'https://api.smith.langchain.com'
 os.environ['LANGSMITH_PROJECT']  = "Document Q/A"
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
-groq_key = st.secrets["GROQ_API_KEY"]
+#groq_key = st.secrets["GROQ_API_KEY"]
 google_key = st.secrets["GOOGLE_API_KEY"]
 
 # Loads a document from the given file path, handling different file types
@@ -57,8 +57,8 @@ def vectore_store():
         st.error(f"Error creating vector store: {e}") # Display error
         return None
     
-model = ChatGroq(model="llama-3.2-1b-preview", temperature=0, api_key=groq_key)
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05", temperature=0, api_key=google_key)
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
 
 # Gets unique documents from a list of lists
 def get_unique(docs : list[list]):
