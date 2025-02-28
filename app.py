@@ -182,11 +182,14 @@ def update_file():
         st.session_state.file_path = temp_file.name
 
 def display_chat():
-    st.chat_message("assistance").write("Hellow! How can i assist you today?")
+    st.chat_message("assistant").write("Hellow! How can i assist you today?")
     for i in range(len(st.session_state['generated'])-1, -1, -1):
-        message(st.session_state['past'][i],
-                is_user=True, key=f"{str(i)}_user")
-        message(st.session_state['generated'][i], key=str(i))
+        with st.chat_message("user", avatar = f"{str(i)}_user"):
+            st.write(st.session_state['past'][i])
+        #message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user")
+        with st.chat_message("assistant", avatar = str(i):
+            st.write(st.session_state['generated'][i])
+        #message(st.session_state['generated'][i], key=str(i))
 
 def main():
 
