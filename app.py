@@ -184,7 +184,7 @@ def update_file():
 def display_chat():
     st.chat_message("assistant").write("Hellow! How can i assist you today?")
     for i in range(len(st.session_state['generated'])-1, -1, -1):
-        with st.chat_message("user", avatar = f"{str(i)}_user"):
+        with st.chat_message("user"):
             st.write(st.session_state['past'][i])
         #message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user")
         with st.chat_message("assistant", avatar = str(i)):
