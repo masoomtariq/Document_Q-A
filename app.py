@@ -134,8 +134,7 @@ def initialize_state():
         'file': '',
         'file_path': '',
         'file_ext': '',
-        'file_source': '',
-        'collection_name': ''
+        'file_source': ''
     }
     for key, value in initialStates.items():
         if key not in st.session_state:
@@ -173,7 +172,7 @@ def initialize_state():
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
-    st.session_state.collection_name, ext = st.session_state.file_source.split('.')
+    ext = st.session_state.file_source.split('.')[-1]
     st.session_state.file_ext = '.'+ext
     # Save the uploaded file to the tempfile filesystem
     with tempfile.NamedTemporaryFile(delete=False, suffix=st.session_state.file_ext) as temp_file:
