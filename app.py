@@ -4,7 +4,7 @@ import tempfile
 from langchain.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter as splitter # For splitting text into chunks
 from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings #For creating text embeddings
-from langchain.vectorstores import FAISS # For storing and searching vectors
+from langchain_core.vectorstores import InMemoryVectorStore # For storing and searching vectors
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI # For using Gemini LLM
 from langchain.prompts import ChatPromptTemplate # For creating prompt templates
@@ -51,7 +51,7 @@ def clean_chunk_meta():
 def vectore_store():
     embed=GoogleGenerativeAIEmbeddings(google_api_key=google_key, model="models/embedding-001")
     try:
-        vectors = FAISS.from_documents(documents=st.session_state.splits, embedding=embed) # Create vector store
+        vectors = InMemoryVectorStore.from_documents(documents=st.session_state.splits, embedding=embed) # Create vector store
         return vectors
     except Exception as e:
         st.error(f"Error creating vector store: {e}") # Display error
@@ -108,7 +108,10 @@ def clear_chat():
 
 def generate_responce():
 
-    retreival = get_queries | st.session_state.vectors.as_retriever().map() | get_unique
+    retriever = st.session_state.vectors.as_retriever()
+    retriever.search_kwargs['k'] = 3
+    
+    retreival = get_queries | retriever.map() | get_unique
 
     st.session_state.messages.append(HumanMessage(content = st.session_state.entered_prompt))
     prompt = ChatPromptTemplate(messages = st.session_state.messages)
