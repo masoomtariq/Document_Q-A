@@ -184,7 +184,7 @@ def update_file():
 def display_chat():
     
     for i in range(len(st.session_state['generated'])-1, -1, -1):
-        message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user", avatar_style="thumbs", logo = "user")
+        message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user", avatar_style="thumbs")
         message(st.session_state['generated'][i], key=str(i))
 
 def main():
