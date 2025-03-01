@@ -140,6 +140,8 @@ def initialize_state():
     for key, value in initialStates.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+def initialize_chat():
     template = """
     You are a helpful and informative document question-answering assistant.  Your primary goal is to provide accurate and insightful answers based *exclusively* on the provided context.  You are an expert at synthesizing information and drawing connections within the given text.  Do not rely on any external knowledge or information beyond what is explicitly given in the context.
     If the user expresses gratitude or indicates the end of the conversation, respond with a polite farewell.
@@ -170,6 +172,7 @@ def initialize_state():
     """
     st.session_state.messages.append(("system", template))
     st.session_state.messages.append(("ai", "Hello! How can I help you today?"))
+    message("Hello! How can I help you today?")
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
@@ -222,7 +225,7 @@ def main():
             
         # Display Messages
         if st.session_state['generated'] == []:
-            message("Hello! How can I help you today?")
+            initialize_chat()
         if st.session_state['generated']:
             if st.button("Clear_Chat", help="Clear the chats"):
                 clear_chat()
