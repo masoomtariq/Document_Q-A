@@ -168,7 +168,9 @@ def initialize_state():
     {context}
     <context>
     """
-    st.session_state.messages = [("system", template)]
+    st.session_state.messages.append(("system", template))
+    st.session_state.messages.append(("assistant", "Hellow! How can i assist you today?"))
+    st.session_state.generated.append("Hellow! How can i assist you today?")
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
@@ -183,12 +185,8 @@ def update_file():
 def display_chat():
     st.chat_message("assistant").write("Hellow! How can i assist you today?")
     for i in range(len(st.session_state['generated'])-1, -1, -1):
-        with st.chat_message("user"):
-            st.write(st.session_state['past'][i])
-        #message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user")
-        with st.chat_message("assistant"):
-            st.write(st.session_state['generated'][i])
-        #message(st.session_state['generated'][i], key=str(i))
+        message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user")
+        message(st.session_state['generated'][i], key=str(i))
 
 def main():
 
