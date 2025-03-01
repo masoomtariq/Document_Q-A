@@ -222,7 +222,7 @@ def main():
             
         # Display Messages
         if st.session_state['generated'] == []:
-            message("Hello! How can I help you today?", key=str(i))
+            message("Hello! How can I help you today?")
         if st.session_state['generated']:
             if st.button("Clear_Chat", help="Clear the chats"):
                 clear_chat()
