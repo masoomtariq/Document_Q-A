@@ -169,6 +169,7 @@ def initialize_state():
     <context>
     """
     st.session_state.messages.append(("system", template))
+    st.chat_message("assistant").write("Hellow! How can i assist you today?")
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
@@ -185,7 +186,6 @@ def display_chat():
     for i in range(len(st.session_state['generated'])-1, -1, -1):
         message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user", avatar_style="thumbs", logo = "user")
         message(st.session_state['generated'][i], key=str(i))
-    st.chat_message("assistant").write("Hellow! How can i assist you today?")
 
 def main():
 
