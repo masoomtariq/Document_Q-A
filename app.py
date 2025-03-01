@@ -221,7 +221,7 @@ def main():
             generate_responce()
             
         # Display Messages
-        if st.session_state['generated'] is None:
+        if st.session_state['generated'] == []:
             message("Hello! How can I help you today?", key=str(i))
         if st.session_state['generated']:
             if st.button("Clear_Chat", help="Clear the chats"):
