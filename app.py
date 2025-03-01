@@ -113,13 +113,13 @@ def generate_responce():
     
     retreival = get_queries | retriever.map() | get_unique
 
-    st.session_state.messages.append(("user", st.session_state.entered_prompt))
+    st.session_state.messages.append(("human", st.session_state.entered_prompt))
     prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
 
     chain = {'context': itemgetter('query') | retreival } | prompt | llm
     response = chain.invoke({'query': st.session_state.entered_prompt})
 
-    st.session_state.messages.append(("assistant", response.content))
+    st.session_state.messages.append(("ai", response.content))
 
     st.session_state['past'].append(st.session_state.entered_prompt)
     st.session_state['generated'].append(response.content)
@@ -169,7 +169,7 @@ def initialize_state():
     <context>
     """
     st.session_state.messages.append(("system", template))
-    st.session_state.messages.append(("assiatant", "Hello! How can I help you today?"))
+    st.session_state.messages.append(("ai", "Hello! How can I help you today?"))
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
