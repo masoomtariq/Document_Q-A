@@ -101,7 +101,7 @@ def clear_session():
     st.toast("Session_State is Cleared")
 
 def clear_chat():
-    keys = ['generated', 'past', 'entered_prompt']
+    keys = ['generated', 'past', 'entered_prompt', 'messages']
     for i in keys:
         del st.session_state[i]
     st.rerun()
@@ -169,7 +169,7 @@ def initialize_state():
     <context>
     """
     st.session_state.messages.append(("system", template))
-    st.chat_message("assistant").write("Hellow! How can i assist you today?")
+    st.session_state.messages.append(("assiatant", "Hello! How can I help you today?"))
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
@@ -184,7 +184,7 @@ def update_file():
 def display_chat():
     
     for i in range(len(st.session_state['generated'])-1, -1, -1):
-        message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user", avatar_style="thumbs")
+        message(st.session_state['past'][i], is_user=True, key=f"{str(i)}_user")
         message(st.session_state['generated'][i], key=str(i))
 
 def main():
@@ -221,6 +221,8 @@ def main():
             generate_responce()
             
         # Display Messages
+        if st.session_state['generated'] is None:
+            message("Hello! How can I help you today?", key=str(i))
         if st.session_state['generated']:
             if st.button("Clear_Chat", help="Clear the chats"):
                 clear_chat()
