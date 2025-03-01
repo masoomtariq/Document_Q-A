@@ -114,7 +114,7 @@ def generate_responce():
     retreival = get_queries | retriever.map() | get_unique
 
     st.session_state.messages.append(HumanMessage(content = st.session_state.entered_prompt))
-    prompt = ChatPromptTemplate(messages = st.session_state.messages)
+    prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
 
     chain = {'context': itemgetter('query') | retreival } | prompt | llm
     response = chain.invoke({'query': st.session_state.entered_prompt})
