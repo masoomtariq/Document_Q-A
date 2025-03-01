@@ -169,8 +169,6 @@ def initialize_state():
     <context>
     """
     st.session_state.messages.append(("system", template))
-    st.session_state.messages.append(("assistant", "Hellow! How can i assist you today?"))
-    st.session_state.generated.append("Hellow! How can i assist you today?")
 
 def update_file():
     st.session_state.file_source = st.session_state.file.name
