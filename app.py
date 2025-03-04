@@ -8,9 +8,9 @@ from langchain_core.vectorstores import InMemoryVectorStore # For storing and se
 from langchain_groq import ChatGroq
 from langchain_google_genai import ChatGoogleGenerativeAI # For using Gemini LLM
 from langchain.prompts import ChatPromptTemplate # For creating prompt templates
-from langchain.load import dumps, loads
+from langchain.retrievers.multi_query import MultiQueryRetriever # For creating a retriever with multiple queries
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AnyMessage # For creating messages
 from operator import itemgetter # For accessing items in dictionaries
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
 import os
 
@@ -20,7 +20,7 @@ os.environ['LANGSMITH_ENDPOINT'] = 'https://api.smith.langchain.com'
 os.environ['LANGSMITH_PROJECT']  = "Document Q/A"
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
-#groq_key = st.secrets["GROQ_API_KEY"]
+groq_key = st.secrets["GROQ_API_KEY"]
 google_key = st.secrets["GOOGLE_API_KEY"]
 
 # Loads a document from the given file path, handling different file types
@@ -57,27 +57,13 @@ def vectore_store():
         st.error(f"Error creating vector store: {e}") # Display error
         return None
     
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05", temperature=0, api_key=google_key)
-model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
+groq_1 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-1b-preview")
+groq_3 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-3b-preview")
+groq_11 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-11b-vision-preview")
+groq_90 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-90b-vision-preview")
 
-# Gets unique documents from a list of lists
-def get_unique(docs : list[list]):
-    flattened = [dumps(item) for sublist in docs for item in sublist]
-
-    unique = list(set(flattened))
-    return [loads(item) for item in unique]
-
-def get_queries(query):
-    template =f"""You are an AI language model assistant. Your task is to generate four
-    different versions of the given user question to retrieve relevant documents from a vector
-    database. By generating multiple perspectives on the user question, your goal is to help
-    the user overcome some of the limitations of the distance-based similarity search.
-    Provide these alternative questions separated by newlines.
-    please do not include extra text do your best it is very important to my career.
-    Original question: {query}"""
-    response = model.invoke(template)
-    queries = [query]+(lambda x : [i for i in x.split('\n') if i])(response.content)
-    return queries
+google = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
+google1 = ChatGoogleGenerativeAI(model = "gemini-2.0-flash-lite-preview-02-05", api_key=google_key, temperature=0)
 
 # Creates the vector store and processes the uploaded file
 def vectorize():
@@ -111,7 +97,7 @@ def generate_responce():
     retriever = st.session_state.vectors.as_retriever()
     retriever.search_kwargs['k'] = 3
     
-    retreival = get_queries | retriever.map() | get_unique
+    multi_retriever = MultiQueryRetriever.from_llm(retriever=retriever, llm=google1, include_original=True)
 
     st.session_state.messages.append(("human", st.session_state.entered_prompt))
     prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
