@@ -63,13 +63,14 @@ def vectore_store():
         st.error(f"Error creating vector store: {e}") # Display error
         return None
     
-groq_1 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-1b-preview")
-groq_3 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-3b-preview")
-groq_11 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-11b-vision-preview")
+#groq_1 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-1b-preview")
+#groq_3 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-3b-preview")
+#groq_11 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-11b-vision-preview")
 groq_90 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-90b-vision-preview")
 
 google = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
-google1 = ChatGoogleGenerativeAI(model = "gemini-2.0-flash-lite-preview-02-05", api_key=google_key, temperature=0)
+google1 = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite", api_key=google_key, temperature=0)
+google2 = ChatGoogleGenerativeAI(model = "gemini-2.0-flash-lite-preview-02-05", api_key=google_key, temperature=0)
 
 def get_summary():
     text = ''
@@ -97,14 +98,6 @@ def vectorize():
             clean_chunk_meta()
 
             st.session_state.retriever = vectore_store()
-            
-            st.session_state.summary = get_summary()
-            st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
-            
-            tool_name = st.session_state.collection_name.replace(' ', '_')+'_Search'
-            description = f"Search for the relevant information in the '{st.session_state.collection_name}' document"
-            st.session_state.retriever_tool = st.session_state.retriever.as_tool(name=tool_name, description=description)
-
             st.toast("Document Uploaded", icon='🎉')
 
 class state(TypedDict):
@@ -141,12 +134,12 @@ def retrieve(state):
                                                         ('human', "{query}")])
     query = state['messages'][-1].content
     set_up = {'query': itemgetter('query'), 'context': itemgetter('query') | st.session_state.multi_retriever}
-    chain = set_up | prompt | google
+    chain = set_up | prompt | google1
     response = chain.invoke({'messages': state['messages'][:-1], 'query': query})
     return {'messages': response, 'response': response}
 
 def assistant(state):
-    llm = google1.bind_tools([st.session_state.retriever_tool])
+    llm = google2.bind_tools([st.session_state.retriever_tool])
     response = llm.invoke(state['messages'])
     return {'messages': response, 'response': response}
 
@@ -182,24 +175,18 @@ def generate_responce():
     config = {"configurable": {"thread_id": "1"}}
 
     # Specify an input
-    messages = response['messages']+[HumanMessage(content=st.session_state.entered_prompt)]
-    st.session_state.messages.append(("human", st.session_state.entered_prompt))
-    prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
-
-    chain = {'context': itemgetter('query') | st.session_state.multi_retriever } | prompt | google
-    response = chain.invoke({'query': st.session_state.entered_prompt})
-
-    st.session_state.messages.append(("ai", response.content))
-
+    messages = st.session_state.messages+[HumanMessage(content=st.session_state.entered_prompt)]
+    workflow = building_graph()
+    response = workflow.invoke({"messages": messages}, config)
+    st.session_state.messages = response['messages']
     st.session_state['past'].append(st.session_state.entered_prompt)
-    st.session_state['generated'].append(response.content)
+    st.session_state['generated'].append(response['response'].content)
 
 def initialize_state():
     # Define initial states and assign values
     initialStates = {
         'generated': [],
         'past': [],
-        'messages': [],
         'entered_prompt': '',
         'file': '',
         'file_path': '',
@@ -274,6 +261,14 @@ def main():
             if st.button("Submit", key="submit", help="Submit the file"): # If the submit button is clicked
                 update_file()
                 vectorize()
+
+                st.session_state.summary = get_summary()
+                st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
+                
+                tool_name = st.session_state.collection_name.replace(' ', '_')+'_Search'
+                description = f"Search for the relevant information in the '{st.session_state.collection_name}' document"
+                st.session_state.retriever_tool = st.session_state.retriever.as_tool(name=tool_name, description=description)
+
 
             st.divider()
 
