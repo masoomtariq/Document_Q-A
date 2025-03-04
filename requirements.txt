@@ -1,8 +1,8 @@
 streamlit
 streamlit-chat
 langchain_community
-pypdf
-qdrant_client
-langchain-google-genai
 langchain_core
 langchain
+pypdf
+langchain_groq
+langchain-google-genai
