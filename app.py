@@ -272,12 +272,12 @@ def main():
 
             st.divider()
 
-        if 'vectors' in st.session_state:
+        if 'retriever' in st.session_state:
                 if st.button("End Session", key="clear", help="Clear the file"):
                     clear_session()
                     st.success("Session_State is Cleared. Document is removed")
 
-    if 'vectors' in st.session_state:
+    if 'retriever' in st.session_state:
         st.subheader(body=st.session_state.collection_name)
         # Define submit function and input field
         query = st.chat_input("Enter Prompt")
