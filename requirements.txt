@@ -3,6 +3,7 @@ streamlit-chat
 langchain_community
 langchain_core
 langchain
+langgraph
 pypdf
 langchain_groq
 langchain-google-genai

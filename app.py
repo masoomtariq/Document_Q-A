@@ -12,6 +12,12 @@ from langchain.retrievers.multi_query import MultiQueryRetriever # For creating 
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AnyMessage # For creating messages
 from operator import itemgetter # For accessing items in dictionaries
 from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate
+from typing_extensions import TypedDict
+from typing import Annotated
+from langgraph.graph import START, END, StateGraph, MessagesState, add_messages
+from langgraph.prebuilt import tools_condition
+from langgraph.prebuilt import ToolNode
+from langgraph.checkpoint.memory import MemorySaver
 import os
 
 ## Langsmith tracking (for experiment tracking, if you have an account)
@@ -52,7 +58,7 @@ def vectore_store():
     embed=GoogleGenerativeAIEmbeddings(google_api_key=google_key, model="models/embedding-001")
     try:
         vectors = InMemoryVectorStore.from_documents(documents=st.session_state.splits, embedding=embed) # Create vector store
-        return vectors
+        return vectors.as_retriever()
     except Exception as e:
         st.error(f"Error creating vector store: {e}") # Display error
         return None
@@ -64,6 +70,18 @@ groq_90 = ChatGroq(api_key=groq_key, temperature=0, model="llama-3.2-90b-vision-
 
 google = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", api_key=google_key, temperature=0)
 google1 = ChatGoogleGenerativeAI(model = "gemini-2.0-flash-lite-preview-02-05", api_key=google_key, temperature=0)
+
+def get_summary():
+    text = ''
+    for i in st.session_state.docs:
+        text += i.page_content.strip()
+        text += "\n"
+    response = google.invoke(f"""Act like a text Summarizer.
+    Instruction: You will the summarize the text efficiently then that summary will be used in Analyzing the query.
+    So keep in mind that Instructions and Summarize the following text:
+
+    Text: {text}""")
+    return response.content
 
 # Creates the vector store and processes the uploaded file
 def vectorize():
@@ -78,8 +96,69 @@ def vectorize():
             st.session_state.splits = splitt.split_documents(st.session_state.docs)
             clean_chunk_meta()
 
-            st.session_state.vectors = vectore_store()
+            st.session_state.retriever = vectore_store()
             st.toast("Document Uploaded", icon='🎉')
+    st.session_state.summary = get_summary()
+    st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
+
+class state(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+    classification_result: str
+    response: str
+
+def query_classifier(state):
+    query = state['messages'][-1].content
+    template = f"""You are an intelligent query analyzer.
+        Your task is to Search through the DataBase's Summary then Analyze that Is there's Any Meaning in the user's query is relevent and Return Only True or False
+        Instructions:
+        - Understand the Query and identify if there are any keywords, meaningful words, or concepts that are related to DataBase.
+        - If query is scrambled then first transform the query and then analyze the query
+        - Determine the relevency Score of qeury and DataBase's Summary
+        - Return True If the relevency Score is greater than 0.5
+        - Otherwise return False
+
+        Keep In mind Return Only True Or False
+
+        DataBase's
+        Summary : {st.session_state.summary}
+
+        Query : {query}"""
+
+    response = groq_90.invoke(template)
+    classification_result = response.content.strip().lower()
+    return {'classification_result': classification_result}
+
+def retrieve(state):
+    sysmsg = "You are a document Q/A assistant you task is to answer the user's questions based the given context/n<context>\n{context}\n<context>"
+    prompt = ChatPromptTemplate.from_messages(messages=[('system', sysmsg),
+                                                        ("placeholder", "{messages}"),
+                                                        ('human', "{query}")])
+    query = state['messages'][-1].content
+    set_up = {'query': itemgetter('query'), 'context': itemgetter('query') | st.session_state.multi_retriever}
+    chain = set_up | prompt | google
+    response = chain.invoke({'messages': state['messages'][:-1], 'query': query})
+    return {'messages': response, 'response': response}
+
+def assistant(state):
+    llm = google1.bind_tools([st.session_state.retriever_tool])
+    response = llm.invoke(state['messages'])
+    return {'messages': response, 'response': response}
+
+def building_graph():
+    workflow = StateGraph(state)
+    workflow.add_node("router", query_classifier)
+    workflow.add_node("retriever", retrieve)
+    workflow.add_node("assistant", assistant)
+    workflow.add_node("tools", ToolNode(tools=[retriever_tool]))
+
+    workflow.add_edge(START, "router")
+    workflow.add_conditional_edges('router', lambda state:state['classification_result'], {'true': 'retriever', 'false': 'assistant'})
+    workflow.add_conditional_edges("assistant", tools_condition)
+    workflow.add_edge("tools", 'assistant')
+
+    workflow = workflow.compile(checkpointer=MemorySaver())
+
+    return workflow
 
 # Clears the current session, deleting the vector store and uploaded file
 def clear_session():
@@ -94,15 +173,10 @@ def clear_chat():
 
 def generate_responce():
 
-    retriever = st.session_state.vectors.as_retriever()
-    retriever.search_kwargs['k'] = 3
-    
-    multi_retriever = MultiQueryRetriever.from_llm(retriever=retriever, llm=google1, include_original=True)
-
     st.session_state.messages.append(("human", st.session_state.entered_prompt))
     prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
 
-    chain = {'context': itemgetter('query') | multi_retriever } | prompt | google
+    chain = {'context': itemgetter('query') | st.session_state.multi_retriever } | prompt | google
     response = chain.invoke({'query': st.session_state.entered_prompt})
 
     st.session_state.messages.append(("ai", response.content))
