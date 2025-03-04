@@ -263,7 +263,7 @@ def main():
                 vectorize()
 
                 st.session_state.summary = get_summary()
-                st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
+                st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google2, include_original=True)
                 
                 tool_name = st.session_state.collection_name.replace(' ', '_')+'_Search'
                 description = f"Search for the relevant information in the '{st.session_state.collection_name}' document"
