@@ -102,7 +102,7 @@ def generate_responce():
     st.session_state.messages.append(("human", st.session_state.entered_prompt))
     prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
 
-    chain = {'context': itemgetter('query') | retreival } | prompt | llm
+    chain = {'context': itemgetter('query') | multi_retriever } | prompt | google
     response = chain.invoke({'query': st.session_state.entered_prompt})
 
     st.session_state.messages.append(("ai", response.content))
