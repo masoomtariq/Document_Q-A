@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_chat import message
 import tempfile
-from langchain.document_loaders import PyPDFLoader, TextLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter as splitter # For splitting text into chunks
 from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings #For creating text embeddings
 from langchain_core.vectorstores import InMemoryVectorStore # For storing and searching vectors
