@@ -187,6 +187,7 @@ def initialize_state():
     initialStates = {
         'generated': [],
         'past': [],
+        'messages': [],
         'entered_prompt': '',
         'file': '',
         'file_path': '',
