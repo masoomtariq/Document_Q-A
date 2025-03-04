@@ -86,7 +86,7 @@ def get_summary():
 # Creates the vector store and processes the uploaded file
 def vectorize():
     with st.status("Processing..."):
-        if 'vectors' not in st.session_state:
+        if 'retriever' not in st.session_state:
             st.toast("Document Loading...")
             st.session_state.docs = load_document()
             clean_pg_meta()
@@ -97,9 +97,15 @@ def vectorize():
             clean_chunk_meta()
 
             st.session_state.retriever = vectore_store()
+            
+            st.session_state.summary = get_summary()
+            st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
+            
+            tool_name = st.session_state.collection_name.replace(' ', '_')+'_Search'
+            description = f"Search for the relevant information in the '{st.session_state.collection_name}' document"
+            st.session_state.retriever_tool = st.session_state.retriever.as_tool(name=tool_name, description=description)
+
             st.toast("Document Uploaded", icon='🎉')
-    st.session_state.summary = get_summary()
-    st.session_state.multi_retriever = MultiQueryRetriever.from_llm(retriever=st.session_state.retriever, llm=google1, include_original=True)
 
 class state(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
@@ -149,7 +155,7 @@ def building_graph():
     workflow.add_node("router", query_classifier)
     workflow.add_node("retriever", retrieve)
     workflow.add_node("assistant", assistant)
-    workflow.add_node("tools", ToolNode(tools=[retriever_tool]))
+    workflow.add_node("tools", ToolNode(tools=[st.session_state.retriever_tool]))
 
     workflow.add_edge(START, "router")
     workflow.add_conditional_edges('router', lambda state:state['classification_result'], {'true': 'retriever', 'false': 'assistant'})
@@ -172,7 +178,11 @@ def clear_chat():
     st.rerun()
 
 def generate_responce():
+    # Specify a thread
+    config = {"configurable": {"thread_id": "1"}}
 
+    # Specify an input
+    messages = response['messages']+[HumanMessage(content=st.session_state.entered_prompt)]
     st.session_state.messages.append(("human", st.session_state.entered_prompt))
     prompt = ChatPromptTemplate.from_messages(messages = st.session_state.messages)
 
@@ -230,8 +240,6 @@ def initialize_chat():
     {context}
     <context>
     """
-    st.session_state.messages.append(("system", template))
-    st.session_state.messages.append(("ai", "Hello! How can I help you today?"))
     message("Hello! How can I help you today?")
 
 def update_file():
