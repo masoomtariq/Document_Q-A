@@ -26,8 +26,8 @@ os.environ['LANGSMITH_ENDPOINT'] = 'https://api.smith.langchain.com'
 os.environ['LANGSMITH_PROJECT']  = "Document Q/A"
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
-groq_key = st.secrets["GROQ_API_KEY"]
-google_key = st.secrets["GOOGLE_API_KEY"]
+groq_key = "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"
+google_key = "AIzaSyBDyGNT3OrQMfI8SfH9q0LsyikQgqihqWg"
 
 # Loads a document from the given file path, handling different file types
 def load_document():
