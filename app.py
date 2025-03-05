@@ -21,9 +21,9 @@ from langgraph.checkpoint.memory import MemorySaver
 import os
 
 ## Langsmith tracking (for experiment tracking, if you have an account)
-os.environ['LANGSMITH_TRACING'] = 'true'
-os.environ['LANGSMITH_ENDPOINT'] = 'https://api.smith.langchain.com'
-os.environ['LANGSMITH_PROJECT']  = "Document Q/A"
+os.environ['LANGSMITH_TRACING'] = st.secrets["LANGSMITH_TRACING"]
+os.environ['LANGSMITH_ENDPOINT'] = st.secrets["LANGSMITH_ENDPOINT"]
+os.environ['LANGSMITH_PROJECT']  = st.secrets["LANGSMITH_PROJECT"]
 os.environ["LANGSMITH_API_KEY"] = st.secrets["LANGSMITH_API_KEY"]
 
 groq_key = st.secrets["GROQ_API_KEY"]
